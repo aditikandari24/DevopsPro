@@ -1,0 +1,42 @@
+version: '3'
+
+services:
+  # MongoDB Service
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: aditikandari49342
+      MONGO_INITDB_ROOT_PASSWORD: 8cWYRwllTTeGFme7
+    volumes:
+      - mongo-data:/data/db
+
+  # Backend Service
+  backend:
+    image: aditikandari09/my-backend-new:latest
+    container_name: my-backend
+    ports:
+      - "3501:3500"
+    depends_on:
+      - mongodb
+    environment:
+      MONGO_URI: mongodb://aditikandari49342:8cWYRwllTTeGFme7@mongodb:27017/mydatabase?authSource=admin
+    env_file:
+      - ./backend/.env
+
+  # Frontend Service
+  frontend:
+    image: aditikandari09/my-frontend-new:latest
+    container_name: my-frontend-container
+    ports:
+      - "3001:3000"  # Changed port mapping
+    depends_on:
+      - backend
+    environment:
+      REACT_APP_BACKEND_API: http://16.171.170.36:3501  # Replace with your public IP
+
+# Define named volumes for data persistence
+volumes:
+  mongo-data:
