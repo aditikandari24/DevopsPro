@@ -1,0 +1,78 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                // Clone the repository from GitHub using credentials for access
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/aditikandari24/DevopsPro.git', 
+                        credentialsId: 'cicd-github'
+                    ]]
+                ])
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                dir('Application-Code/backend') {
+                    // Install dependencies for the backend
+                    sh 'npm install'
+                }
+                dir('Application-Code/frontend') {
+                    // Install dependencies for the frontend
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Build and Deploy') {
+            steps {
+                dir('Application-Code') {
+                    // Build Docker images and bring the services up using docker-compose
+                    sh '''
+                        docker-compose build
+                        docker-compose up -d
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                // Verify that containers are running by listing them
+                sh 'docker ps'
+            }
+        }
+
+        stage('Run OWASP Dependency-Check') {
+            steps {
+                // Run the OWASP Dependency-Check scan
+                dependencyCheck additionalArguments: '', // Optional: Add extra arguments for the scan
+                               odcInstallation: 'OWASP Dependency-Check' // Use the name of the installation
+            }
+        }
+    }
+
+    post {
+        always {
+            // Clean up services (shutting down Docker containers)
+            dir('Application-Code') {
+                sh 'docker-compose down'
+            }
+        }
+
+        success {
+            // Echo success message and archive the Dependency-Check report
+            echo 'Pipeline completed successfully!'
+            archiveArtifacts artifacts: 'dependency-check-report.xml'
+        }
+
+        failure {
+            // Echo failure message
+            echo 'Pipeline failed!'
+        }
+    }
+}
